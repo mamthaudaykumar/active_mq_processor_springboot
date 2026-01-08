@@ -1,0 +1,21 @@
+spring:
+  activemq:
+    broker-url: ssl://abc:61617
+    user: cc
+    password: test@cc@123
+    pooled: true
+
+  jms:
+    pub-sub-domain: false
+
+app:
+  messaging:
+    queue-name: testQueue
+
+
+server:
+  port: 8080
+
+logging:
+  level:
+    root: INFO

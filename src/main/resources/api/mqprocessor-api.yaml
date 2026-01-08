@@ -1,0 +1,201 @@
+openapi: 3.0.3
+info:
+  title: ActiveMQ Message Processor API
+  description: REST API to publish XML messages to an ActiveMQ queue and process them via a JMS Listener.
+  version: 1.0.3
+
+servers:
+  - url: http://localhost:8080
+    description: Local development server
+
+tags:
+  - name: Messaging
+    description: Operations for publishing and processing messages via ActiveMQ.
+  - name: Admin
+    description: Endpoints for administrating the ActiveMQ listener
+
+paths:
+  /messages:
+    post:
+      tags:
+        - Messaging
+      summary: Publish XML message to ActiveMQ
+      description: Sends an XML message with a correlation ID to the configured ActiveMQ queue.
+      operationId: sendMessage
+      requestBody:
+        required: true
+        content:
+          application/xml:
+            schema:
+              $ref: '#/components/schemas/MessageRequest'
+            example: |
+              <MessageRequest>
+                <message><![CDATA[
+                  <Order>
+                    <OrderId>12345</OrderId>
+                    <Amount>2500</Amount>
+                    <Currency>INR</Currency>
+                  </Order>
+                ]]></message>
+                <correlationId>abc123</correlationId>
+              </MessageRequest>
+      responses:
+        '200':
+          description: Message successfully published
+          content:
+            application/xml:
+              schema:
+                $ref: '#/components/schemas/MessageResponse'
+              example: |
+                <MessageResponse>
+                  <status>success</status>
+                  <message>Message sent successfully with correlationId: abc123</message>
+                </MessageResponse>
+        '400':
+          description: Invalid request payload
+          content:
+            application/xml:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example: |
+                <ErrorResponse>
+                  <status>error</status>
+                  <message>Invalid XML payload format</message>
+                </ErrorResponse>
+        '401':
+          description: Unauthorized
+          content:
+            application/xml:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example: |
+                <ErrorResponse>
+                  <status>error</status>
+                  <message>Unauthorized access. Please provide valid credentials.</message>
+                </ErrorResponse>
+        '404':
+          description: Queue or correlation ID not found
+          content:
+            application/xml:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example: |
+                <ErrorResponse>
+                  <status>error</status>
+                  <message>Specified message queue or correlation ID not found.</message>
+                </ErrorResponse>
+        '500':
+          description: Server or ActiveMQ connection error
+          content:
+            application/xml:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example: |
+                <ErrorResponse>
+                  <status>error</status>
+                  <message>Failed to send message to ActiveMQ broker</message>
+                </ErrorResponse>
+
+  /admin/listener/stop:
+    post:
+      tags:
+        - Admin
+      summary: Pause the ActiveMQ listener
+      operationId: pauseListener
+      responses:
+        '200':
+          description: Listener paused successfully or already stopped/not found
+          content:
+            text/plain:
+              schema:
+                type: string
+                example: "Listener paused successfully"
+
+  /admin/listener/start:
+    post:
+      tags:
+        - Admin
+      summary: Resume the ActiveMQ listener
+      operationId: resumeListener
+      responses:
+        '200':
+          description: Listener resumed successfully or already running/not found
+          content:
+            text/plain:
+              schema:
+                type: string
+                example: "Listener resumed successfully"
+
+  /admin/listener/status:
+    get:
+      tags:
+        - Admin
+      summary: Check the status of the ActiveMQ listener
+      operationId: listenerStatus
+      responses:
+        '200':
+          description: Returns whether the listener is running or not
+          content:
+            text/plain:
+              schema:
+                type: string
+                example: "Listener running: true"
+
+components:
+  schemas:
+    MessageRequest:
+      type: object
+      xml:
+        name: MessageRequest
+      required:
+        - order
+        - correlationId
+      properties:
+        order:
+          type: object
+          xml:
+            name: Order
+          properties:
+            orderId:
+              type: string
+              xml:
+                name: OrderId
+            amount:
+              type: number
+              xml:
+                name: Amount
+            currency:
+              type: string
+              xml:
+                name: Currency
+
+        correlationId:
+          type: string
+          xml:
+            name: correlationId
+          description: Correlation ID used to trace the message.
+          example: abc123
+
+    MessageResponse:
+      type: object
+      xml:
+        name: MessageResponse
+      properties:
+        status:
+          type: string
+          example: success
+        message:
+          type: string
+          example: "Message sent successfully with correlationId: abc123"
+
+    ErrorResponse:
+      type: object
+      xml:
+        name: ErrorResponse
+      properties:
+        status:
+          type: string
+          example: error
+        message:
+          type: string
+          example: An unexpected error occurred.
